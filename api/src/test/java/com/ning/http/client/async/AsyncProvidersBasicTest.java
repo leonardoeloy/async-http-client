@@ -1299,6 +1299,48 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     }
 
     @Test(groups = {"standalone", "default_provider", "async"})
+    public void asyncDoGetIgnoreTimeoutTest() throws Throwable {
+        FluentCaseInsensitiveStringsMap h = new FluentCaseInsensitiveStringsMap();
+        h.add("LockThread", "true");
+        AsyncHttpClient client = getAsyncHttpClient(new AsyncHttpClientConfig.Builder().setIgnoreRequestTimeout(true).build());
+
+        // Use a l in case the assert fail
+        final CountDownLatch l = new CountDownLatch(1);
+
+        client.prepareGet(getTargetUrl()).setHeaders(h).execute(new AsyncCompletionHandlerAdapter() {
+
+            @Override
+            public Response onCompleted(Response response) throws Exception {
+                try {
+                    Assert.fail("Must not receive a response");
+                } finally {
+                    l.countDown();
+                }
+                return response;
+            }
+
+            @Override
+            public void onThrowable(Throwable t) {
+                try {
+                    if (t instanceof TimeoutException) {
+                        Assert.fail("Unexpected exception", t);
+                    } else {
+                        Assert.assertTrue(true);
+                    }
+                } finally {
+                    l.countDown();
+                }
+            }
+        });
+
+        if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            Assert.fail("Timed out");
+        }
+        client.close();
+
+    }
+
+    @Test(groups = {"standalone", "default_provider", "async"})
     public void asyncDoGetQueryStringTest() throws Throwable {
         AsyncHttpClient client = getAsyncHttpClient(null);
 

@@ -203,38 +203,46 @@ public final class NettyResponseFuture<V> extends AbstractListenableFuture<V> {
     /* @Override */
     public V get(long l, TimeUnit tu) throws InterruptedException, TimeoutException, ExecutionException {
         if (!isDone() && !isCancelled()) {
-            boolean expired = false;
-            if (l == -1) {
-                latch.await();
-            } else {
-                expired = !latch.await(l, tu);
-            }
+            if (asyncHttpProvider.getConfig().getIgnoreRequestTimeout()) {
+                boolean keepRunning = true;
 
-            if (expired) {
-                isCancelled.set(true);
-                try {
-                    channel.getPipeline().getContext(NettyAsyncHttpProvider.class).setAttachment(new NettyAsyncHttpProvider.DiscardEvent());
-                    channel.close();
-                } catch (Throwable t) {
-                    // Ignore
+                while (keepRunning) {
+                    latch.await(l, tu);
                 }
-                TimeoutException te = new TimeoutException(String.format("No response received after %s %s", l, tu.name().toLowerCase()));
-                if (!throwableCalled.getAndSet(true)) {
+            } else {
+                boolean expired = false;
+                if (l == -1) {
+                    latch.await();
+                } else {
+                    expired = !latch.await(l, tu);
+                }
+
+                if (expired) {
+                    isCancelled.set(true);
                     try {
-                        asyncHandler.onThrowable(te);
+                        channel.getPipeline().getContext(NettyAsyncHttpProvider.class).setAttachment(new NettyAsyncHttpProvider.DiscardEvent());
+                        channel.close();
                     } catch (Throwable t) {
-                        logger.debug("asyncHandler.onThrowable", t);
-                    } finally {
-                        cancelReaper();
-                        throw new ExecutionException(te);
+                        // Ignore
+                    }
+                    TimeoutException te = new TimeoutException(String.format("No response received after %s %s", l, tu.name().toLowerCase()));
+                    if (!throwableCalled.getAndSet(true)) {
+                        try {
+                            asyncHandler.onThrowable(te);
+                        } catch (Throwable t) {
+                            logger.debug("asyncHandler.onThrowable", t);
+                        } finally {
+                            cancelReaper();
+                            throw new ExecutionException(te);
+                        }
                     }
                 }
-            }
-            isDone.set(true);
+                isDone.set(true);
 
-            ExecutionException e = exEx.getAndSet(null);
-            if (e != null) {
-                throw e;
+                ExecutionException e = exEx.getAndSet(null);
+                if (e != null) {
+                    throw e;
+                }
             }
         }
         return getContent();

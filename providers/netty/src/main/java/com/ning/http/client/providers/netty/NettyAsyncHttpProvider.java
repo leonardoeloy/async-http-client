@@ -1804,7 +1804,8 @@ public class NettyAsyncHttpProvider extends SimpleChannelUpstreamHandler impleme
             }
 
             if (nettyResponseFuture != null && nettyResponseFuture.hasExpired()
-                    && !nettyResponseFuture.isDone() && !nettyResponseFuture.isCancelled()) {
+                    && !nettyResponseFuture.isDone() && !nettyResponseFuture.isCancelled()
+                    && !config.getIgnoreRequestTimeout()) {
                 log.debug("Request Timeout expired for {}\n", nettyResponseFuture);
 
                 int requestTimeout = config.getRequestTimeoutInMs();

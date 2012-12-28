@@ -109,6 +109,7 @@ public class AsyncHttpClientConfig {
     protected int ioThreadMultiplier;
     protected boolean strict302Handling;
     protected int maxConnectionLifeTimeInMs;
+    protected boolean ignoreRequestTimeout;
 
     protected AsyncHttpClientConfig() {
     }
@@ -143,7 +144,8 @@ public class AsyncHttpClientConfig {
                                   boolean removeQueryParamOnRedirect,
                                   HostnameVerifier hostnameVerifier,
                                   int ioThreadMultiplier,
-                                  boolean strict302Handling) {
+                                  boolean strict302Handling,
+                                  boolean ignoreRequestTimeout) {
 
         this.maxTotalConnections = maxTotalConnections;
         this.maxConnectionPerHost = maxConnectionPerHost;
@@ -182,6 +184,7 @@ public class AsyncHttpClientConfig {
         }
         this.proxyServer = proxyServer;
         this.useRawUrl = useRawUrl;
+        this.ignoreRequestTimeout = ignoreRequestTimeout;
     }
 
     /**
@@ -513,6 +516,15 @@ public class AsyncHttpClientConfig {
     }
 
     /**
+     * Ignores the request timeout for dealing with continuously streaming requests
+     *
+     * @return ignore request timeout
+     */
+    public boolean getIgnoreRequestTimeout() {
+        return this.ignoreRequestTimeout;
+    }
+
+    /**
      * Builder for an {@link AsyncHttpClient}
      */
     public static class Builder {
@@ -561,6 +573,7 @@ public class AsyncHttpClientConfig {
         private HostnameVerifier hostnameVerifier = new AllowAllHostnameVerifier();
         private int ioThreadMultiplier = 2;
         private boolean strict302Handling;
+        private boolean ignoreRequestTimeout;
 
         public Builder() {
         }
@@ -1005,6 +1018,17 @@ public class AsyncHttpClientConfig {
         }
 
         /**
+         * Ignores the request timeout while calling a {@link ListenableFuture}, allowing receiving a continuous streaming.
+         *
+         * @param ignoreRequestTimeout ignore request timeout
+         * @return a {@link Builder}
+         */
+        public Builder setIgnoreRequestTimeout(boolean ignoreRequestTimeout) {
+            this.ignoreRequestTimeout = ignoreRequestTimeout;
+            return this;
+        }
+
+        /**
          * Create a config builder with values taken from the given prototype configuration.
          *
          * @param prototype the configuration to use as a prototype.
@@ -1047,6 +1071,7 @@ public class AsyncHttpClientConfig {
             removeQueryParamOnRedirect = prototype.isRemoveQueryParamOnRedirect();
             hostnameVerifier = prototype.getHostnameVerifier();
             strict302Handling = prototype.isStrict302Handling();
+            ignoreRequestTimeout = prototype.getIgnoreRequestTimeout();
         }
 
         /**
@@ -1095,7 +1120,8 @@ public class AsyncHttpClientConfig {
                     removeQueryParamOnRedirect,
                     hostnameVerifier,
                     ioThreadMultiplier,
-                    strict302Handling);
+                    strict302Handling,
+                    ignoreRequestTimeout);
         }
     }
 }
